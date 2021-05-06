@@ -6,7 +6,6 @@ from cocotb.triggers import RisingEdge, Timer
 from cocotb.clock import Clock
 from random import getrandbits
 
-
 class Stream(Record):
     def __init__(self, width, **kwargs):
         Record.__init__(self, [('data', width), ('valid', 1), ('ready', 1)], **kwargs)
@@ -45,29 +44,28 @@ class Stream(Record):
 class Adder(Elaboratable):
     def __init__(self, width):
         self.a = Stream(width, name='a')
-        self.r = Stream(width, name='r')
         self.b = Stream(width, name='b')
+        self.r = Stream(width + 1, name='r')
 
     def elaborate(self, platform):
         m = Module()
         sync = m.d.sync
         comb = m.d.comb
 
+        c2a = Signal(len(self.a))
+        c2b = Signal(len(self.b))
 
         with m.If(self.r.accepted()):
             sync += self.r.valid.eq(0)
 
         comb += self.a.ready.eq((~self.r.valid) | (self.r.accepted()))   
         comb += self.b.ready.eq((~self.r.valid) | (self.r.accepted()))   
+        comb += c2a.eq(~self.a + 1) #CA2 de a
+        comb += c2b.eq(~self.a + 1) #CA2 de a
 
         with m.If(self.a.accepted() & self.b.accepted()):
-            sync += [
-                self.r.valid.eq(1),
-                self.r.data.eq(self.a.data + self.b.data)
-            ]
+            sync += [self.r.valid.eq(1), self.r.data.eq(c2a + c2b)]
 
-        #sync += self.r.data.eq(~self.r.data)
-        #sync += self.a.data.eq(1)
         return m
 
 
@@ -83,7 +81,7 @@ async def init_test(dut):
 async def burst(dut):
     # Si envia datos entonces valid = 1, cuando termina se pone en 0, y mientras que ready sea 1 va a enviarlos, si es 0 se queda eseperando.
     # Si recibe datos ready se setea, mientras que valid = 1 los recibe en c/ flanco.
-    await Timer(1,'ns')
+    #await Timer(1,'ns')
 
     await init_test(dut)
 
@@ -92,8 +90,9 @@ async def burst(dut):
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
 
     N = 100
-    width = len(dut.a__data)
-    mask = int('1' * width, 2)
+    #width = len(dut.a__data)
+    #mask = int('1' * width, 2)
+
     data_a = [_ for _ in range(N)]
     data_b = [_ for _ in range(N)]
     cocotb.fork(stream_input_b.send(data_b))
