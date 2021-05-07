@@ -19,7 +19,7 @@ def generar_dump(verilog):
 	text = verilog.read()
 
 	matches = re.findall(r'  reg \[(.*)\] (\S*) \[(.*)\];\n  initial begin\n((    \S*\[\S*\] = \S*;\n)*)  end\n', text)
-	matches = matches[0][3] 
+	matches = matches[0][3] # Validar esto
 	matches = matches.split('\n')
 	for match in matches:
 		try:
