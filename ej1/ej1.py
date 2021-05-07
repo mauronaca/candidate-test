@@ -52,19 +52,14 @@ class Adder(Elaboratable):
         sync = m.d.sync
         comb = m.d.comb
 
-        c2a = Signal(len(self.a))
-        c2b = Signal(len(self.b))
-
-        with m.If(self.r.accepted()):
-            sync += self.r.valid.eq(0)
+        #with m.If(self.r.accepted()):
+        #    sync += self.r.valid.eq(0)
 
         comb += self.a.ready.eq((~self.r.valid) | (self.r.accepted()))   
         comb += self.b.ready.eq((~self.r.valid) | (self.r.accepted()))   
-        comb += c2a.eq(~self.a + 1) #CA2 de a
-        comb += c2b.eq(~self.a + 1) #CA2 de a
 
         with m.If(self.a.accepted() & self.b.accepted()):
-            sync += [self.r.valid.eq(1), self.r.data.eq(c2a + c2b)]
+            sync += [self.r.valid.eq(1), self.r.data.eq(self.a.data + self.b.data)]
 
         return m
 
@@ -78,10 +73,7 @@ async def init_test(dut):
 
 
 @cocotb.test()
-async def burst(dut):
-    # Si envia datos entonces valid = 1, cuando termina se pone en 0, y mientras que ready sea 1 va a enviarlos, si es 0 se queda eseperando.
-    # Si recibe datos ready se setea, mientras que valid = 1 los recibe en c/ flanco.
-    #await Timer(1,'ns')
+async def test1(dut):
 
     await init_test(dut)
 
@@ -89,21 +81,22 @@ async def burst(dut):
     stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
 
-    N = 100
-    #width = len(dut.a__data)
-    #mask = int('1' * width, 2)
+    N = 2^len(dut.a__data)
+    mask = int('1' * (len(dut.a__data) + 1), 2)
 
     data_a = [_ for _ in range(N)]
     data_b = [_ for _ in range(N)]
+    expected = [(2*i) & mask for i in range(N)]
     cocotb.fork(stream_input_b.send(data_b))
     cocotb.fork(stream_input_a.send(data_a))
 
-    #await Timer(N * 10, 'ns')
-    recved = await stream_output.recv(N)
+    #dut._log.info(data_a)
 
+    recved = await stream_output.recv(N)
+    assert recved == expected
 
 if __name__ == '__main__':
-    core = Adder(5)
+    core = Adder(8)
     run(
         core, 'ej1',
         ports=
