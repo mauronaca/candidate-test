@@ -110,27 +110,6 @@ async def burst(dut):
     assert recved == expected
 
 
-'''
-@cocotb.test()
-async def burst2(dut):
-    await init_test(dut)
-
-    stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
-    stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
-    stream_output = Stream.Driver(dut.clk, dut, 'r__')
-
-    N = 2^len(dut.a__data)
-
-    data_a = [i for i in range(N)]
-    data_b = [0 for i in range(N)]
-    expected = data_a
-
-    cocotb.fork(stream_input_a.send(data_a))
-    cocotb.fork(stream_input_b.send(data_b))
-
-    recved = await stream_output.recv(N)
-    assert recved == expected
-'''
 if __name__ == '__main__':
     core = Adder(8)
     run(
