@@ -2,6 +2,9 @@ import sys
 from os import remove
 import re
 
+MEM_FILE_NAME = 'memdump0.mem' # por consola(?)
+NEW_FILE_NAME = 'newtestcase.v'
+
 def main(args):
 	if len(args) != 2:
 		sys.exit('Ingresar nombre de archivo')
@@ -11,12 +14,12 @@ def main(args):
 		sys.exit('Archivo no encontrado')
 
 	generar_dump(verilog_f)
-	crear_archivo(verilog_f)
+	generar_nueva_sintaxis(verilog_f)
 
 	verilog_f.close()
 
 def generar_dump(verilog_f):
-	f = open('memdump0.mem', 'w+')
+	f = open(MEM_FILE_NAME, 'w+')
 	verilog_f.seek(0)
 	verilog_txt = verilog_f.read()
 
@@ -25,7 +28,7 @@ def generar_dump(verilog_f):
 		matches = matches[0][3] # Validarlo
 	except IndexError:
 		f.close()
-		remove('memdump0.mem')
+		remove(MEM_FILE_NAME)
 		verilog_f.close()
 		sys.exit('Error en el archivo verilog')
 
@@ -38,11 +41,11 @@ def generar_dump(verilog_f):
 			continue
 	f.close()
 	
-def crear_archivo(verilog_f):
-	f = open('expected.v', 'w+')
+def generar_nueva_sintaxis(verilog_f):
+	f = open(NEW_FILE_NAME, 'w+')
 	verilog_f.seek(0)
 	verilog_txt = verilog_f.read().split('\n')
-	rplcmnt = '  $readmemh("memdump0.mem", mem);\n'
+	rplcmnt = '  $readmemh("%s", mem);\n'%MEM_FILE_NAME
 
 	mem_block = False
 	for line in verilog_txt:
