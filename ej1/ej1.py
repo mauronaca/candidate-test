@@ -52,8 +52,8 @@ class Adder(Elaboratable):
         sync = m.d.sync
         comb = m.d.comb
 
-        #with m.If(self.r.accepted()):
-        #    sync += self.r.valid.eq(0)
+        with m.If(self.r.accepted()):
+            sync += self.r.valid.eq(0)
 
         comb += self.a.ready.eq((~self.r.valid) | (self.r.accepted()))   
         comb += self.b.ready.eq((~self.r.valid) | (self.r.accepted()))   
@@ -73,15 +73,15 @@ async def init_test(dut):
 
 
 @cocotb.test()
-async def test1(dut):
-
+async def burst(dut):
     await init_test(dut)
 
+    # 1er test
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
     stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
 
-    N = 2^len(dut.a__data)
+    N = 100
     mask = int('1' * (len(dut.a__data) + 1), 2)
 
     data_a = [_ for _ in range(N)]
@@ -90,11 +90,47 @@ async def test1(dut):
     cocotb.fork(stream_input_b.send(data_b))
     cocotb.fork(stream_input_a.send(data_a))
 
-    #dut._log.info(data_a)
+    recved = await stream_output.recv(N)
+    assert recved == expected
+
+    # 2do test
+    dut.rst <= 1
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.rst <= 0
+
+    data_a = [_ for _ in range(N)]
+    data_b = [0 for _ in range(N)]
+    expected = data_a
+
+    cocotb.fork(stream_input_b.send(data_b))
+    cocotb.fork(stream_input_a.send(data_a))
 
     recved = await stream_output.recv(N)
     assert recved == expected
 
+
+'''
+@cocotb.test()
+async def burst2(dut):
+    await init_test(dut)
+
+    stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
+    stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
+    stream_output = Stream.Driver(dut.clk, dut, 'r__')
+
+    N = 2^len(dut.a__data)
+
+    data_a = [i for i in range(N)]
+    data_b = [0 for i in range(N)]
+    expected = data_a
+
+    cocotb.fork(stream_input_a.send(data_a))
+    cocotb.fork(stream_input_b.send(data_b))
+
+    recved = await stream_output.recv(N)
+    assert recved == expected
+'''
 if __name__ == '__main__':
     core = Adder(8)
     run(
