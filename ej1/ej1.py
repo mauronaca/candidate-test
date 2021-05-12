@@ -63,7 +63,6 @@ class Adder(Elaboratable):
 
         return m
 
-
 async def init_test(dut):
     cocotb.fork(Clock(dut.clk, 2, 'ns').start()) # 500 millones p/seg
     dut.rst <= 1
@@ -71,12 +70,11 @@ async def init_test(dut):
     await RisingEdge(dut.clk)
     dut.rst <= 0
 
-
-@cocotb.test()
+## 1er test
+@cocotb.test(stage = 0)
 async def burst(dut):
     await init_test(dut)
 
-    # 1er test
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
     stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
@@ -93,12 +91,17 @@ async def burst(dut):
     recved = await stream_output.recv(N)
     assert recved == expected
 
-    # 2do test
-    dut.rst <= 1
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-    dut.rst <= 0
+## Otro test
+@cocotb.test(stage = 1)
+async def test2(dut):
+    await init_test(dut)
 
+    stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
+    stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
+    stream_output = Stream.Driver(dut.clk, dut, 'r__')
+
+    N = 100
+    
     data_a = [_ for _ in range(N)]
     data_b = [0 for _ in range(N)]
     expected = data_a
@@ -110,27 +113,6 @@ async def burst(dut):
     assert recved == expected
 
 
-'''
-@cocotb.test()
-async def burst2(dut):
-    await init_test(dut)
-
-    stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
-    stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
-    stream_output = Stream.Driver(dut.clk, dut, 'r__')
-
-    N = 2^len(dut.a__data)
-
-    data_a = [i for i in range(N)]
-    data_b = [0 for i in range(N)]
-    expected = data_a
-
-    cocotb.fork(stream_input_a.send(data_a))
-    cocotb.fork(stream_input_b.send(data_b))
-
-    recved = await stream_output.recv(N)
-    assert recved == expected
-'''
 if __name__ == '__main__':
     core = Adder(8)
     run(
@@ -142,4 +124,4 @@ if __name__ == '__main__':
             *list(core.b.fields.values())
         ],
         vcd_file='adder.vcd'
-    )   
+    )  
