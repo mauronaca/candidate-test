@@ -91,6 +91,7 @@ async def burst(dut):
     recved = await stream_output.recv(N)
     assert recved == expected
 
+<<<<<<< HEAD
 ## Otro test
 @cocotb.test(stage = 1)
 async def test2(dut):
@@ -102,6 +103,14 @@ async def test2(dut):
 
     N = 100
     
+=======
+    # 2do test
+    dut.rst <= 1
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.rst <= 0
+
+>>>>>>> 1755be3d91d6cb43e9d6c405c4f087dc7cab8c41
     data_a = [_ for _ in range(N)]
     data_b = [0 for _ in range(N)]
     expected = data_a
@@ -124,4 +133,8 @@ if __name__ == '__main__':
             *list(core.b.fields.values())
         ],
         vcd_file='adder.vcd'
+<<<<<<< HEAD
     )  
+=======
+    )   
+>>>>>>> 1755be3d91d6cb43e9d6c405c4f087dc7cab8c41
