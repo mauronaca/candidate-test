@@ -72,7 +72,7 @@ async def init_test(dut):
 
 ## 1er test
 @cocotb.test(stage = 0)
-async def burst(dut):
+async def test1(dut):
     await init_test(dut)
 
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
@@ -100,7 +100,7 @@ async def test2(dut):
     stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
 
-    N = 100
+    N = 10
 
     data_a = [_ for _ in range(N)]
     data_b = [0 for _ in range(N)]
@@ -112,6 +112,46 @@ async def test2(dut):
     recved = await stream_output.recv(N)
     assert recved == expected
 
+@cocotb.test(stage = 3)
+async def test3(dut):
+    await init_test(dut)
+    dut.b__valid <= 1
+
+    N = 10
+    stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
+    stream_output = Stream.Driver(dut.clk, dut, 'r__')
+    data_a = [getrandbits(len(dut.a__data)) for _ in range(N)]
+
+    mask = int('1' * (len(dut.a__data) + 1), 2)
+    expected = [_ & mask for _ in data_a]
+
+    cocotb.fork(stream_input_a.send(data_a))
+    recved = await stream_output.recv(N)
+
+    assert recved == expected
+    dut.b__valid <= 0
+
+## 4to test
+@cocotb.test(stage = 4)
+async def test4(dut):
+    await init_test(dut)
+
+    stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
+    stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
+    stream_output = Stream.Driver(dut.clk, dut, 'r__')
+
+    N = 100
+    width = len(dut.a__data)
+    mask = int('1' * (width + 1), 2)
+
+    data_a = [getrandbits(width) for _ in range(N)]
+    data_b = [getrandbits(width) for _ in range(N)]
+    expected = [(d_a + d_b) & mask for d_a, d_b in zip(data_a, data_b)]
+    cocotb.fork(stream_input_b.send(data_b))
+    cocotb.fork(stream_input_a.send(data_a))
+
+    recved = await stream_output.recv(N)
+    assert recved == expected
 
 if __name__ == '__main__':
     core = Adder(8)
