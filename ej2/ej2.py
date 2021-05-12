@@ -63,7 +63,7 @@ def expected():
 
 def main(args):
 	if len(args) != 2:
-		sys.exit('Ingresar nombre de archivo')
+		sys.exit('Ingresar nombre del archivo verilog a modificar')
 	try:
 		verilog_f = open(args[1], 'r')
 	except FileNotFoundError:
