@@ -40,3 +40,4 @@ module top(dat_r, dat_w, we, clk, rst, adr);
     mem_w_en = we;
   end
 endmodule
+
