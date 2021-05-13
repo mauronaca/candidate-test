@@ -1,4 +1,5 @@
 import sys
+import argparse
 import os
 import re
 
@@ -10,15 +11,18 @@ def generar_dump(verilog_f):
 	verilog_f.seek(0)
 	verilog_txt = verilog_f.read()
 
+	# Busca en el archivo original y devuelve los aciertos. El tercer grupo es el bloque donde se inicializa la memoria.
+	# Si no hubo acierto, error de indice, entonces cierra el archivo. 
 	matches = re.findall(r'  reg \[(.*)\] (\S*) \[(.*)\];\n  initial begin\n((    \S*\[\S*\] = \S*;\n)*)  end\n', verilog_txt)
 	try: 
-		matches = matches[0][3] # Validarlo
+		matches = matches[0][3] 
 	except IndexError:
 		f.close()
 		os.remove(MEM_FILE_NAME)
 		verilog_f.close()
 		sys.exit('Error en el archivo verilog')
 
+	# Copia solo los valores al nuevo archivo.
 	matches = matches.split('\n')
 	for match in matches:
 		try:
@@ -29,11 +33,15 @@ def generar_dump(verilog_f):
 	f.close()
 	
 def generar_nueva_sintaxis(verilog_f):
-	f = open(NEW_FILE_NAME, 'w+')
+	# Abro el nuevo archivo a generar y guardo cada linea de texto del original
+	f = open(NEW_FILE_NAME, 'w+') 
 	verilog_f.seek(0)
 	verilog_txt = verilog_f.read().split('\n')
 	rplcmnt = '  $readmemh("%s", mem);\n'%MEM_FILE_NAME
 
+	# Itero sobre cada linea del texto original y va copiandolas al nuevo archivo; Si encuentra la sentencia tipo reg [] mem [], 
+	# entonces entra en el bloque de codigo de iniciacion de memoria. Lo primero que hace es copiar la nueva sentencia
+	# y luego se saltea todo el bloque desde initial begin hasta end. 
 	mem_block = False
 	for line in verilog_txt:
 		if re.match(r'  reg \[(.*)\] (\S*) \[(.*)\];', line) or mem_block:
@@ -61,20 +69,22 @@ def expected():
 			#os.remove(NEW_FILE_NAME)
 			return False
 
-def main(args):
-	if len(args) != 2:
-		sys.exit('Ingresar nombre del archivo verilog a modificar')
+def main(file):
 	try:
-		verilog_f = open(args[1], 'r')
+		verilog_f = open(file, 'r')
 	except FileNotFoundError:
 		sys.exit('Archivo no encontrado')
 
 	generar_dump(verilog_f)
 	generar_nueva_sintaxis(verilog_f)
 
-	assert expected()
+	#assert expected()
 
 	verilog_f.close()
 
 if __name__ == '__main__':
-	main(sys.argv)
+	args_parser =  argparse.ArgumentParser()
+	args_parser.add_argument('file', metavar = 'Nombre del archivo verilog a modificar')
+	args = args_parser.parse_args()
+
+	main(args.file)
