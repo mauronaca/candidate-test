@@ -72,14 +72,14 @@ async def init_test(dut):
 
 ## 1er test
 @cocotb.test(stage = 0)
-async def test1(dut):
+async def test_duplicador(dut):
     await init_test(dut)
 
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
     stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
 
-    N = 100
+    N = 2 ** len(dut.a__data)
     mask = int('1' * (len(dut.a__data) + 1), 2)
 
     data_a = [_ for _ in range(N)]
@@ -93,47 +93,62 @@ async def test1(dut):
 
 ## Otro test
 @cocotb.test(stage = 1)
-async def test2(dut):
+async def test_iguales(dut):
     await init_test(dut)
 
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
     stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
 
-    N = 10
+    N = 2**len(dut.a__data)
+    mask = int('1' * (len(dut.a__data) + 1), 2)
 
     data_a = [_ for _ in range(N)]
     data_b = [0 for _ in range(N)]
-    expected = data_a
+    expected = [d_a & mask for d_a in data_a]
 
     cocotb.fork(stream_input_b.send(data_b))
     cocotb.fork(stream_input_a.send(data_a))
 
     recved = await stream_output.recv(N)
+
     assert recved == expected
 
 @cocotb.test(stage = 3)
-async def test3(dut):
+async def test_negativos(dut):
     await init_test(dut)
-    dut.b__valid <= 1
 
-    N = 10
+    N = 100
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
+    stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
-    data_a = [getrandbits(len(dut.a__data)) for _ in range(N)]
+    
+    width = len(dut.a__data)
+
+    data_a = [getrandbits(width) for _ in range(N)]
+    data_b = [getrandbits(width) for _ in range(N)]
+    # Todos los nros a negativo. De esta manera evito ponerle un negativo a un 0. 
+    for a, b in zip(data_a, data_b):
+        if a != 0 or b != 0:
+            a = -a
+            b = -b
 
     mask = int('1' * (len(dut.a__data) + 1), 2)
-    expected = [_ & mask for _ in data_a]
+    expected = [(d_a + d_b) & mask for d_a, d_b in zip(data_a, data_b)]
 
     cocotb.fork(stream_input_a.send(data_a))
+    cocotb.fork(stream_input_b.send(data_b))
     recved = await stream_output.recv(N)
 
+    #print('a = {} \nb = {}'.format(data_a, data_b))
+    #print('Esperado: {}'.format(expected))
+    #print('Recibido: {}'.format(recved))
+
     assert recved == expected
-    dut.b__valid <= 0
 
 ## 4to test
 @cocotb.test(stage = 4)
-async def test4(dut):
+async def test_positivo_negativo(dut):
     await init_test(dut)
 
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
@@ -143,18 +158,27 @@ async def test4(dut):
     N = 100
     width = len(dut.a__data)
     mask = int('1' * (width + 1), 2)
+    mask1 = int('1' * (width ), 2)
 
     data_a = [getrandbits(width) for _ in range(N)]
-    data_b = [getrandbits(width) for _ in range(N)]
-    expected = [(d_a + d_b) & mask for d_a, d_b in zip(data_a, data_b)]
+    data_b = [-getrandbits(width) for _ in range(N)]
+    for d_b in data_b:
+        if d_b != 0 :
+            d_b = -d_b
+
+    expected = [(d_a + (d_b & mask1)) & mask for d_a, d_b in zip(data_a, data_b)]
     cocotb.fork(stream_input_b.send(data_b))
     cocotb.fork(stream_input_a.send(data_a))
 
     recved = await stream_output.recv(N)
+    #print('a = {} \nb = {}'.format(data_a, data_b))
+    #print('Esperado: {}'.format(expected))
+    #print('Recibido: {}'.format(recved))
+
     assert recved == expected
 
 if __name__ == '__main__':
-    core = Adder(8)
+    core = Adder(4)
     run(
         core, 'ej1',
         ports=
