@@ -125,7 +125,7 @@ async def test_negativos(dut):
     
     width = len(dut.a__data)
 
-    data_a = [0 for _ in range(N)]
+    data_a = [getrandbits(width) for _ in range(N)]
     data_b = [getrandbits(width) for _ in range(N)]
     # Todos los nros a negativo. Si hay un 0 lo reemplaza por el complemento
     data_a = list(map(lambda x : -x if x != 0 else ~0, data_a))
