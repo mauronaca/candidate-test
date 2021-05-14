@@ -125,13 +125,11 @@ async def test_negativos(dut):
     
     width = len(dut.a__data)
 
-    data_a = [getrandbits(width) for _ in range(N)]
+    data_a = [0 for _ in range(N)]
     data_b = [getrandbits(width) for _ in range(N)]
-    # Todos los nros a negativo. De esta manera evito ponerle un negativo a un 0. 
-    for a, b in zip(data_a, data_b):
-        if a != 0 or b != 0:
-            a = -a
-            b = -b
+    # Todos los nros a negativo. Si hay un 0 lo reemplaza por el complemento
+    data_a = list(map(lambda x : -x if x != 0 else ~0, data_a))
+    data_b = list(map(lambda x : -x if x != 0 else ~0, data_b))
 
     mask = int('1' * (len(dut.a__data) + 1), 2)
     expected = [(d_a + d_b) & mask for d_a, d_b in zip(data_a, data_b)]
@@ -161,10 +159,8 @@ async def test_positivo_negativo(dut):
     mask1 = int('1' * (width ), 2)
 
     data_a = [getrandbits(width) for _ in range(N)]
-    data_b = [-getrandbits(width) for _ in range(N)]
-    for d_b in data_b:
-        if d_b != 0 :
-            d_b = -d_b
+    data_b = [getrandbits(width) for _ in range(N)]
+    data_b = list(map(lambda x : -x if x != 0 else ~0, data_b))
 
     expected = [(d_a + (d_b & mask1)) & mask for d_a, d_b in zip(data_a, data_b)]
     cocotb.fork(stream_input_b.send(data_b))
